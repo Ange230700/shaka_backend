@@ -1,0 +1,12 @@
+# .prettierignore
+
+*.env*
+*.yml
+*.yaml
+Dockerfile
+.gitignore
+.husky/*
+README.md
+node_modules
+dist
+.prettierignore

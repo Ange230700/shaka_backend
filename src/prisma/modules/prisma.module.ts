@@ -1,0 +1,11 @@
+// src\prisma\modules\prisma.module.ts
+
+import { Global, Module } from '@nestjs/common';
+import { PrismaService } from 'shakaapi/src/prisma/services/prisma.service';
+
+@Global()
+@Module({
+  providers: [PrismaService],
+  exports: [PrismaService],
+})
+export class PrismaModule {}

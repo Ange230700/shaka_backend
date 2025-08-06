@@ -1,0 +1,20 @@
+# docker-compose.yml
+
+services:
+  shakaapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shakaapi
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    command: npm run start:dev
+
+volumes:
+  node_modules:
