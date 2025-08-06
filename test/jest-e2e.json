@@ -1,6 +1,6 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
-  "rootDir": ".",
+  "rootDir": "..",
   "testEnvironment": "node",
   "detectOpenHandles": true,
   "testRegex": ".e2e-spec.ts$",
@@ -8,6 +8,7 @@
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "moduleNameMapper": {
-    "shakaapi/test/(.*)": "<rootDir>/$1"
-  }
+    "shakaapi/(.*)": "<rootDir>/$1"
+  },
+  "setupFiles": ["<rootDir>/test/setup-e2e.ts"]
 }
