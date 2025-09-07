@@ -1,4 +1,4 @@
-// src\app.controller.spec.ts
+// src\app\controllers\specs\app.controller.spec.ts
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from 'shakaapi/src/app/controllers/app.controller';

@@ -1,4 +1,6 @@
-// test\setup-e2e.ts
+// test/setup-e2e.ts
+import { config } from 'dotenv';
+import { resolve } from 'node:path';
 
-import * as dotenv from 'dotenv';
-dotenv.config({ path: '.env' });
+// Load dedicated test env (works locally and in CI)
+config({ path: resolve(process.cwd(), '.env.test') });

@@ -1,9 +1,11 @@
 // src\surfspot\services\surfspot.service.ts
 
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'shakaapi/src/prisma/services/prisma.service';
 import { SurfSpotEntity } from 'shakaapi/src/surfspot/entities/surfspot.entity';
 import { SurfSpotDto } from 'shakaapi/src/surfspot/dtos/surfspot.dto';
+import { CreateSurfSpotDto } from 'shakaapi/src/surfspot/dtos/create-surfspot.dto';
+import { Prisma } from 'shakadb/prisma/generated/prisma-client';
 
 type RawSurfSpot = {
   surf_spot_id: number;
@@ -17,6 +19,12 @@ type RawSurfSpot = {
   created_time?: Date | null;
   geocode_raw?: string | null;
 };
+
+function isPrismaKnownError(
+  e: unknown,
+): e is Prisma.PrismaClientKnownRequestError {
+  return e instanceof Prisma.PrismaClientKnownRequestError;
+}
 
 /** Map a raw Prisma surfSpot record to your entity. */
 function toSurfSpotEntity(prisma: RawSurfSpot): SurfSpotEntity {
@@ -63,6 +71,56 @@ function toSurfSpotDto(entity: SurfSpotEntity): SurfSpotDto {
 @Injectable()
 export class SurfSpotService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** CREATE a surf spot (returns enriched DTO; arrays empty on create) */
+  async create(body: CreateSurfSpotDto): Promise<SurfSpotDto> {
+    try {
+      const created = await this.prisma.surfSpot.create({
+        data: {
+          destination: body.destination,
+          address: body.address,
+          state_country: body.stateCountry ?? null,
+          difficulty_level: body.difficultyLevel ?? null,
+          peak_season_begin: body.peakSeasonBegin
+            ? new Date(body.peakSeasonBegin)
+            : null,
+          peak_season_end: body.peakSeasonEnd
+            ? new Date(body.peakSeasonEnd)
+            : null,
+          magic_seaweed_link: body.magicSeaweedLink ?? null,
+          created_time: body.createdTime
+            ? new Date(body.createdTime)
+            : new Date(),
+          geocode_raw: body.geocodeRaw ?? null,
+        },
+      });
+
+      const entity: SurfSpotEntity = {
+        ...toSurfSpotEntity(created),
+        photoUrls: [],
+        breakTypes: [],
+        influencers: [],
+      };
+
+      return toSurfSpotDto(entity);
+    } catch (err: unknown) {
+      const isUnique = isPrismaKnownError(err) && err.code === 'P2002';
+
+      // Let TS infer; shape matches HttpExceptionOptions
+      const options =
+        err instanceof Error
+          ? {
+              cause: err,
+              description: isUnique ? 'Unique constraint violation' : undefined,
+            }
+          : undefined;
+
+      throw new BadRequestException(
+        isUnique ? 'Surf spot already exists' : 'Unable to create surf spot',
+        options,
+      );
+    }
+  }
 
   // GET ALL with enrichment
   async findAll(): Promise<SurfSpotDto[]> {

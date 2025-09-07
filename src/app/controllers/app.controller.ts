@@ -1,4 +1,4 @@
-// src\app.controller.ts
+// src\app\controllers\app.controller.ts
 
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from 'shakaapi/src/app/services/app.service';

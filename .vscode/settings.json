@@ -1,18 +1,28 @@
 {
   "cSpell.words": [
+    "dbname",
+    "dotenv",
     "dtos",
+    "Ehukai",
+    "frameguard",
     "github",
+    "healthz",
+    "hsts",
     "infl",
     "mysql",
+    "mysqladmin",
     "nestjs",
     "nodenext",
     "prisma",
+    "proot",
+    "Pupukea",
     "rootpassword",
     "shaka",
     "shakaapi",
     "shakadb",
     "shakapass",
     "shakauser",
-    "surfspot"
+    "surfspot",
+    "Traefik"
   ]
 }

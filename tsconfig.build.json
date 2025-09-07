@@ -1,3 +1,4 @@
+// tsconfig.build.json
 {
   "extends": "./tsconfig.json",
   "exclude": [
