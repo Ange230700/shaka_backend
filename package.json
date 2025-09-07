@@ -111,7 +111,7 @@
     "testEnvironment": "node",
     "detectOpenHandles": true,
     "moduleNameMapper": {
-      "^shakaapi/(.*)$": "<rootDir>/$1"
+      "^shakaapi1/(.*)$": "<rootDir>/$1"
     }
   },
   "lint-staged": {

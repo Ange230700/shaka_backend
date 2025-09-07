@@ -18,11 +18,9 @@ import {
   ApiNotFoundResponse,
   ApiParam,
   ApiExtraModels,
-  getSchemaPath,
 } from '@nestjs/swagger';
 import { SurfSpotService } from 'shakaapi/src/surfspot/services/surfspot.service';
 import { SurfSpotDto } from 'shakaapi/src/surfspot/dtos/surfspot.dto';
-import { ErrorResponseDto } from 'shakaapi/src/swagger/error-response.dto';
 import {
   CREATE_SURFSPOT_BODY_EXAMPLE,
   SURFSPOT_EXAMPLE,
@@ -74,7 +72,21 @@ export class SurfSpotController {
     description: 'Surf spot not found',
     content: {
       'application/json': {
-        schema: { $ref: getSchemaPath(ErrorResponseDto) },
+        schema: {
+          type: 'object',
+          properties: {
+            statusCode: { type: 'number', example: 404 },
+            message: {
+              oneOf: [
+                { type: 'string' },
+                { type: 'array', items: { type: 'string' } },
+              ],
+              example: 'Not Found',
+            },
+            error: { type: 'string', example: 'Not Found' },
+          },
+          required: ['statusCode', 'message', 'error'],
+        },
         examples: { sample: { value: ERROR_404_EXAMPLE } },
       },
     },
