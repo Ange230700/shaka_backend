@@ -17,4 +17,4 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY package*.json ./
 EXPOSE 3000
-CMD ["sh", "-lc", "node dist/main.js || node dist/src/main.js"]
+CMD ["sh", "-lc", "node dist/src/main.js"]
