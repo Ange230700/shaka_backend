@@ -68,25 +68,18 @@ jobs:
         run: |
           set -euxo pipefail
 
-          SCHEMA_PATH="node_modules/shakadb/prisma/schema.prisma"
-          ALT_SCHEMA_PATH="node_modules/shakadb/dist/prisma/schema.prisma"
-
-          ls -la node_modules/shakadb || true
-          ls -la node_modules/shakadb/prisma || true
-          ls -la node_modules/shakadb/dist/prisma || true
-
-          if [ -f "$SCHEMA_PATH" ]; then
-            PRISMA_SCHEMA="$SCHEMA_PATH"
-          elif [ -f "$ALT_SCHEMA_PATH" ]; then
-            PRISMA_SCHEMA="$ALT_SCHEMA_PATH"
-          else
-            echo "❌ Could not find shakadb Prisma schema"
-            exit 1
-          fi
-
-          echo "✅ Using Prisma schema: $PRISMA_SCHEMA"
-          # Prisma 5.x aligns with many published libs
-          npx prisma@^5 db push --schema "$PRISMA_SCHEMA" --accept-data-loss --skip-generate
+          # Use the schema *actually shipped* with shakadb
+          PRISMA_SCHEMA="$(node -e "console.log(require.resolve('shakadb/prisma/schema.prisma'))")"
+              
+          echo "Prisma CLI version:"
+          npx prisma -v
+              
+          echo "Using schema: $PRISMA_SCHEMA"
+          echo "DB: $DATABASE_URL"
+          npx prisma db push \
+            --schema "$PRISMA_SCHEMA" \
+            --accept-data-loss \
+            --skip-generate
 
       - name: Seed test DB
         run: npm run seed:test

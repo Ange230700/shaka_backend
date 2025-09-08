@@ -31,40 +31,23 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 import prisma from 'shakadb';
-import { Prisma } from 'shakadb/generated/prisma-client';
-
-type TableRow = { table_name: string };
 
 async function assertSchemaPresent() {
-  // List of tables your seed expects
-  const required = [
-    'SurfSpot',
-    'SurfBreakType',
-    'Influencer',
-    'Photo',
-    'SurfSpot_SurfBreakType',
-    'SurfSpot_Influencer',
-  ];
-
-  // Which of those are actually present?
-  const rows = await prisma.$queryRaw<TableRow[]>(
-    Prisma.sql`
-      SELECT table_name
-      FROM information_schema.tables
-      WHERE table_schema = DATABASE()
-        AND table_name IN (${Prisma.join(required)})
-    `,
-  );
-
-  const present = new Set(rows.map((r) => r.table_name));
-  const missing = required.filter((t) => !present.has(t));
-
-  if (missing.length) {
-    throw new Error(
-      `Schema not applied. Missing tables: ${missing.join(
-        ', ',
-      )}. Run Prisma db push for shakadb before seeding.`,
-    );
+  try {
+    // Try a no-op read against one expected model's table via Prisma Client.
+    // If the table doesn't exist, MySQL will throw and we can show a helpful message.
+    await prisma.surfSpot.findFirst({ select: { surf_spot_id: true } });
+  } catch (e) {
+    // Most MySQL “table doesn't exist” errors are ER_NO_SUCH_TABLE (code 1146)
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/doesn't exist|does not exist|ER_NO_SUCH_TABLE|1146/i.test(msg)) {
+      throw new Error(
+        'Schema not applied. Run Prisma db push for shakadb before seeding.\n' +
+          'Tip (CI): npx prisma db push --schema $(node -e "console.log(require.resolve(\'shakadb/prisma/schema.prisma\'))")',
+      );
+    }
+    // Unknown error → rethrow so CI shows the real cause
+    throw e;
   }
 }
 
