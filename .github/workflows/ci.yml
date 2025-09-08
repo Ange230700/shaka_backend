@@ -17,23 +17,18 @@ jobs:
         env:
           MYSQL_DATABASE: shaka_test
           MYSQL_ROOT_PASSWORD: root
-          # ❌ DO NOT set MYSQL_USER=root (invalid for official image)
-          # Optional but harmless if you prefer older auth:
-          # MYSQL_ROOT_HOST: "%"
-        # No host port mapping needed; job can reach service via hostname "mysql"
-        ports:
-          - 3306:3306
+        # You can omit ports entirely when using the service hostname "mysql"
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -proot --silent || exit 1"
-          --health-interval=10s
+          --health-interval=5s
           --health-timeout=5s
-          --health-retries=10
+          --health-retries=20
 
     env:
       NODE_ENV: test
       FRONT_API_BASE_URL: http://localhost:5173
       # ✅ Use service hostname
-      DATABASE_URL: mysql://root:root@127.0.0.1:3306/shaka_test
+      DATABASE_URL: mysql://root:root@mysql:3306/shaka_test
 
     steps:
       - name: Checkout code
@@ -48,17 +43,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Healthcheck already waits, but a tiny extra wait loop is fine:
-      - name: Wait for MySQL (mysqladmin ping)
+      # ✅ Wait for container *health* (not just the TCP port)
+      - name: Wait for MySQL health
         shell: bash
         run: |
+          set -e
+          CID="${{ job.services.mysql.id }}"
+          echo "Waiting for mysql container ($CID) to be healthy..."
           for i in {1..60}; do
-            (echo > /dev/tcp/127.0.0.1/3306) >/dev/null 2>&1 && echo "MySQL is up" && break
-            echo "Waiting for MySQL... ($i/60)"
+            STATUS="$(docker inspect --format='{{.State.Health.Status}}' "$CID" || echo starting)"
+            echo "  status: $STATUS"
+            if [ "$STATUS" = "healthy" ]; then
+              echo "MySQL is healthy"
+              break
+            fi
             sleep 2
           done
 
-      # Apply shakadb schema (use migrate if available; fall back to push)
+      # ✅ Push shakadb schema using Prisma 5.x (matches most published libs)
       - name: Apply schema (shakadb)
         shell: bash
         run: |
@@ -67,7 +69,6 @@ jobs:
           SCHEMA_PATH="node_modules/shakadb/prisma/schema.prisma"
           ALT_SCHEMA_PATH="node_modules/shakadb/dist/prisma/schema.prisma"
 
-          # Show what shakadb shipped
           ls -la node_modules/shakadb || true
           ls -la node_modules/shakadb/prisma || true
           ls -la node_modules/shakadb/dist/prisma || true
@@ -82,9 +83,8 @@ jobs:
           fi
 
           echo "✅ Using Prisma schema: $PRISMA_SCHEMA"
+          npx prisma@^5 db push --schema "$PRISMA_SCHEMA" --accept-data-loss --skip-generate
 
-          # Create/align tables in shaka_test
-          npx prisma@^6 db push --schema "$PRISMA_SCHEMA" --accept-data-loss
       - name: Seed test DB
         run: npm run seed:test
 
