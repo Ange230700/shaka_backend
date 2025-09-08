@@ -21,6 +21,8 @@ jobs:
           # Optional but harmless if you prefer older auth:
           # MYSQL_ROOT_HOST: "%"
         # No host port mapping needed; job can reach service via hostname "mysql"
+        ports:
+          - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -proot --silent || exit 1"
           --health-interval=10s
@@ -31,7 +33,7 @@ jobs:
       NODE_ENV: test
       FRONT_API_BASE_URL: http://localhost:5173
       # ✅ Use service hostname
-      DATABASE_URL: mysql://root:root@mysql:3306/shaka_test
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/shaka_test
 
     steps:
       - name: Checkout code
@@ -48,10 +50,10 @@ jobs:
 
       # Healthcheck already waits, but a tiny extra wait loop is fine:
       - name: Wait for MySQL (mysqladmin ping)
+        shell: bash
         run: |
           for i in {1..60}; do
-            docker exec "${{ job.services.mysql.id }}" \
-              mysqladmin ping -h 127.0.0.1 -proot --silent && echo "MySQL is up" && break
+            (echo > /dev/tcp/127.0.0.1/3306) >/dev/null 2>&1 && echo "MySQL is up" && break
             echo "Waiting for MySQL... ($i/60)"
             sleep 2
           done
@@ -59,8 +61,8 @@ jobs:
       # Apply shakadb schema (use migrate if available; fall back to push)
       - name: Apply schema (shakadb)
         run: |
-          npx prisma@^5 migrate deploy --schema node_modules/shakadb/prisma/schema.prisma \
-          || npx prisma@^5 db push --schema node_modules/shakadb/prisma/schema.prisma
+          npx prisma@^6 migrate deploy --schema node_modules/shakadb/prisma/schema.prisma \
+          || npx prisma@^6 db push --schema node_modules/shakadb/prisma/schema.prisma
 
       - name: Seed test DB
         run: npm run seed:test
