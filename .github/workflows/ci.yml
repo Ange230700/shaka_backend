@@ -60,10 +60,31 @@ jobs:
 
       # Apply shakadb schema (use migrate if available; fall back to push)
       - name: Apply schema (shakadb)
+        shell: bash
         run: |
-          npx prisma@^6 migrate deploy --schema node_modules/shakadb/prisma/schema.prisma \
-          || npx prisma@^6 db push --schema node_modules/shakadb/prisma/schema.prisma
+          set -euxo pipefail
 
+          SCHEMA_PATH="node_modules/shakadb/prisma/schema.prisma"
+          ALT_SCHEMA_PATH="node_modules/shakadb/dist/prisma/schema.prisma"
+
+          # Show what shakadb shipped
+          ls -la node_modules/shakadb || true
+          ls -la node_modules/shakadb/prisma || true
+          ls -la node_modules/shakadb/dist/prisma || true
+
+          if [ -f "$SCHEMA_PATH" ]; then
+            PRISMA_SCHEMA="$SCHEMA_PATH"
+          elif [ -f "$ALT_SCHEMA_PATH" ]; then
+            PRISMA_SCHEMA="$ALT_SCHEMA_PATH"
+          else
+            echo "❌ Could not find shakadb Prisma schema at $SCHEMA_PATH or $ALT_SCHEMA_PATH"
+            exit 1
+          fi
+
+          echo "✅ Using Prisma schema: $PRISMA_SCHEMA"
+
+          # Create/align tables in shaka_test
+          npx prisma@^6 db push --schema "$PRISMA_SCHEMA" --accept-data-loss
       - name: Seed test DB
         run: npm run seed:test
 

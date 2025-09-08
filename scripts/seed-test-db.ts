@@ -31,6 +31,42 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 import prisma from 'shakadb';
+import { Prisma } from 'shakadb/generated/prisma-client';
+
+type TableRow = { table_name: string };
+
+async function assertSchemaPresent() {
+  // List of tables your seed expects
+  const required = [
+    'SurfSpot',
+    'SurfBreakType',
+    'Influencer',
+    'Photo',
+    'SurfSpot_SurfBreakType',
+    'SurfSpot_Influencer',
+  ];
+
+  // Which of those are actually present?
+  const rows = await prisma.$queryRaw<TableRow[]>(
+    Prisma.sql`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = DATABASE()
+        AND table_name IN (${Prisma.join(required)})
+    `,
+  );
+
+  const present = new Set(rows.map((r) => r.table_name));
+  const missing = required.filter((t) => !present.has(t));
+
+  if (missing.length) {
+    throw new Error(
+      `Schema not applied. Missing tables: ${missing.join(
+        ', ',
+      )}. Run Prisma db push for shakadb before seeding.`,
+    );
+  }
+}
 
 async function resetDb() {
   // Use raw SQL to avoid FK violations; Prisma model names map to PascalCase tables
@@ -47,6 +83,7 @@ async function resetDb() {
 
 async function main() {
   // Ensure schema exists (run prisma migrate deploy/push for shakadb before this script)
+  await assertSchemaPresent();
   await resetDb();
 
   // Create base spot
