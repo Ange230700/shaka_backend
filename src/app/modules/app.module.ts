@@ -29,6 +29,8 @@ const authLimiter = rateLimit({
       isGlobal: true,
       cache: true,
       validate: validateEnv,
+      envFilePath:
+        process.env.NODE_ENV === 'test' ? ['.env.test', '.env'] : ['.env'],
     }),
 
     // ⬇️ Logger configured from ConfigService

@@ -1,6 +1,14 @@
 // test/setup-e2e.ts
-import { config } from 'dotenv';
-import { resolve } from 'node:path';
+// Ensure E2E uses the test env file
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as dotenv from 'dotenv';
 
-// Load dedicated test env (works locally and in CI)
-config({ path: resolve(process.cwd(), '.env.test') });
+const cwd = process.cwd();
+const envTest = path.join(cwd, '.env.test');
+dotenv.config({
+  path: fs.existsSync(envTest) ? envTest : path.join(cwd, '.env'),
+});
+
+// Force NODE_ENV=test so ConfigModule, rate limit, etc. behave accordingly
+process.env.NODE_ENV = 'test';

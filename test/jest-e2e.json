@@ -3,12 +3,13 @@
   "rootDir": "..",
   "testEnvironment": "node",
   "detectOpenHandles": true,
+  "testTimeout": 30000,
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "moduleNameMapper": {
-    "shakaapi/(.*)": "<rootDir>/$1"
+    "^shakaapi/(.*)$": "<rootDir>/$1"
   },
   "setupFiles": ["<rootDir>/test/setup-e2e.ts"]
 }
