@@ -17,7 +17,8 @@ jobs:
         env:
           MYSQL_DATABASE: shaka_test
           MYSQL_ROOT_PASSWORD: root
-        # You can omit ports entirely when using the service hostname "mysql"
+        ports:
+          - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -proot --silent || exit 1"
           --health-interval=5s
@@ -27,8 +28,8 @@ jobs:
     env:
       NODE_ENV: test
       FRONT_API_BASE_URL: http://localhost:5173
-      # ✅ Use service hostname
-      DATABASE_URL: mysql://root:root@mysql:3306/shaka_test
+      # ✅ USE HOST + MAPPED PORT (since steps run on the host)
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/shaka_test
 
     steps:
       - name: Checkout code
@@ -43,7 +44,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ✅ Wait for container *health* (not just the TCP port)
       - name: Wait for MySQL health
         shell: bash
         run: |
@@ -60,9 +60,11 @@ jobs:
             sleep 2
           done
 
-      # ✅ Push shakadb schema using Prisma 5.x (matches most published libs)
       - name: Apply schema (shakadb)
         shell: bash
+        env:
+          # 🔒 Double-ensure the CLI sees the host DSN
+          DATABASE_URL: mysql://root:root@127.0.0.1:3306/shaka_test
         run: |
           set -euxo pipefail
 
@@ -78,11 +80,12 @@ jobs:
           elif [ -f "$ALT_SCHEMA_PATH" ]; then
             PRISMA_SCHEMA="$ALT_SCHEMA_PATH"
           else
-            echo "❌ Could not find shakadb Prisma schema at $SCHEMA_PATH or $ALT_SCHEMA_PATH"
+            echo "❌ Could not find shakadb Prisma schema"
             exit 1
           fi
 
           echo "✅ Using Prisma schema: $PRISMA_SCHEMA"
+          # Prisma 5.x aligns with many published libs
           npx prisma@^5 db push --schema "$PRISMA_SCHEMA" --accept-data-loss --skip-generate
 
       - name: Seed test DB
