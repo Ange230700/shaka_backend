@@ -6,20 +6,48 @@
  * - 1 influencer (Gerry Lopez) with join row
  * - 2 photos
  */
-import { PrismaClient } from 'shakadb/prisma/generated/prisma-client';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as dotenv from 'dotenv';
 
-const prisma = new PrismaClient();
+const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+const cwd = process.cwd();
+const candidates = isCI
+  ? ['.env.test.ci', '.env.test', '.env']
+  : ['.env.test.local', '.env.test', '.env'];
+
+for (const fname of candidates) {
+  const p = path.join(cwd, fname);
+  if (fs.existsSync(p)) {
+    dotenv.config({ path: p });
+    break;
+  }
+}
+if (!process.env.NODE_ENV) process.env.NODE_ENV = 'test';
+
+if (process.env.NODE_ENV !== 'test') {
+  console.error('❌ Refusing to seed because NODE_ENV is not "test".');
+  process.exit(1);
+}
+
+import prisma from 'shakadb';
+
+async function resetDb() {
+  // Use raw SQL to avoid FK violations; Prisma model names map to PascalCase tables
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=0');
+  // Truncate children first (order is less important with FK checks off, but this is tidy)
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE `SurfSpot_SurfBreakType`');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE `SurfSpot_Influencer`');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE `Photo`');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE `Influencer`');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE `SurfBreakType`');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE `SurfSpot`');
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=1');
+}
 
 async function main() {
-  // Clear in FK-safe order inside a transaction
-  await prisma.$transaction([
-    prisma.photo.deleteMany(),
-    prisma.surfSpot_SurfBreakType.deleteMany(),
-    prisma.surfSpot_Influencer.deleteMany(),
-    prisma.influencer.deleteMany(),
-    prisma.surfBreakType.deleteMany(),
-    prisma.surfSpot.deleteMany(),
-  ]);
+  // Ensure schema exists (run prisma migrate deploy/push for shakadb before this script)
+  await resetDb();
 
   // Create base spot
   const spot = await prisma.surfSpot.create({
@@ -38,7 +66,7 @@ async function main() {
     select: { surf_spot_id: true },
   });
 
-  // Create break types (no createManyAndReturn in Prisma)
+  // Break types
   await prisma.surfBreakType.createMany({
     data: [
       { surf_break_type_name: 'Point Break' },
@@ -46,8 +74,6 @@ async function main() {
     ],
     skipDuplicates: true,
   });
-
-  // Read them back to get IDs
   const breakTypes = await prisma.surfBreakType.findMany({
     where: { surf_break_type_name: { in: ['Point Break', 'Reef Break'] } },
     select: { surf_break_type_id: true, surf_break_type_name: true },
@@ -73,7 +99,7 @@ async function main() {
     ],
   });
 
-  // Join rows (types + influencer)
+  // Joins
   await prisma.$transaction([
     ...breakTypes.map((bt) =>
       prisma.surfSpot_SurfBreakType.create({
@@ -96,7 +122,6 @@ async function main() {
 
 main()
   .catch((err: unknown) => {
-    // Properly narrow the unknown error to satisfy @typescript-eslint/no-unsafe-*
     if (err instanceof Error) {
       console.error('❌ Seed failed:', err.message, '\n', err.stack);
     } else {

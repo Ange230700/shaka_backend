@@ -5,7 +5,7 @@ import { PrismaService } from 'shakaapi/src/prisma/services/prisma.service';
 import { SurfSpotEntity } from 'shakaapi/src/surfspot/entities/surfspot.entity';
 import { SurfSpotDto } from 'shakaapi/src/surfspot/dtos/surfspot.dto';
 import { CreateSurfSpotDto } from 'shakaapi/src/surfspot/dtos/create-surfspot.dto';
-import { Prisma } from 'shakadb/prisma/generated/prisma-client';
+import { Prisma } from 'shakadb/generated/prisma-client';
 
 type RawSurfSpot = {
   surf_spot_id: number;
