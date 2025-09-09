@@ -1,4 +1,4 @@
-<!-- README.md -->
+<!-- shaka_backend\README.md -->
 
 # Shaka API — Surf spots catalog (NestJS + Prisma/MySQL)
 
