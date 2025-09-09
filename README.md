@@ -1,7 +1,5 @@
 <!-- README.md -->
 
-Here’s a clean, accurate project description you can drop into your README (followed by an expanded “README skeleton” you can keep or trim).
-
 # Shaka API — Surf spots catalog (NestJS + Prisma/MySQL)
 
 Shaka API is a production-ready NestJS service that exposes a catalog of surf spots with enriched details (photos, break types, influencers). It ships with strict validation, OpenAPI docs, security headers, rate limiting (memory or Redis), structured logging (Pino), end-to-end tests against a real MySQL instance, and CI that applies the Prisma schema (from the shared `shakadb` package), seeds test data, and runs unit/E2E suites.
