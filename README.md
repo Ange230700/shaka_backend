@@ -1,100 +1,149 @@
 <!-- README.md -->
 
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+Here’s a clean, accurate project description you can drop into your README (followed by an expanded “README skeleton” you can keep or trim).
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+# Shaka API — Surf spots catalog (NestJS + Prisma/MySQL)
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Shaka API is a production-ready NestJS service that exposes a catalog of surf spots with enriched details (photos, break types, influencers). It ships with strict validation, OpenAPI docs, security headers, rate limiting (memory or Redis), structured logging (Pino), end-to-end tests against a real MySQL instance, and CI that applies the Prisma schema (from the shared `shakadb` package), seeds test data, and runs unit/E2E suites.
 
-## Description
+## Tech stack (high level)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+* **Runtime/Framework**: Node 24, NestJS 11 (Express)
+* **DB layer**: Prisma Client from the shared package **`shakadb`** (MySQL 8.x)
+* **Validation / Docs**: class-validator, class-transformer, Swagger (OpenAPI)
+* **Security**: Helmet, CORS allowlist, global rate-limit (Redis optional)
+* **Logging**: `nestjs-pino` (Pino, pretty logs in dev, redact sensitive fields)
+* **Testing**: Jest (unit), Supertest (E2E) with disposable MySQL & typed env validation (Zod)
+* **DevEx**: TS strictness, path aliases (`shakaapi/*`), Husky + lint-staged, commitlint/commitizen
+* **Packaging/Runtime**: Dockerfile (builder/runner), docker-compose for local dev
+* **CI**: GitHub Actions pipeline (build, lint, unit, E2E) + MySQL service + schema/seed steps
 
-## Project setup
+## Main features
 
-```bash
-$ npm install
-```
+* **SurfSpot endpoints**
 
-## Compile and run the project
+  * `GET /surfspot/all` – list spots enriched with `photoUrls`, `breakTypes`, `influencers`
+  * `GET /surfspot/:id` – fetch one enriched spot (404 when missing)
+  * `POST /surfspot` – create a spot (validated payload, safe date handling)
+* **Health check**: `GET /healthz`
+* **API docs**: Swagger at `/docs`, with typed examples and response schemas
+* **Hardening**
 
-```bash
-# development
-$ npm run start
+  * Helmet (CSP relaxed in dev for Swagger), CORS allowlist via `FRONT_API_BASE_URL`
+  * Global rate-limit (skip `/healthz` and `/docs`); Redis store supported
+  * Request ID propagation (`X-Request-Id`) and structured logs with redaction
 
-# watch mode
-$ npm run start:dev
+---
 
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
+## Quick start
 
 ```bash
-# unit tests
-$ npm run test
+# 1) Install
+npm ci
 
-# e2e tests
-$ npm run test:e2e
+# 2) Provide env (see .env.sample)
+cp .env.sample .env
+# Set DATABASE_URL for MySQL + optionally FRONT_API_BASE_URL, rate-limit, Redis, LOG_LEVEL
 
-# test coverage
-$ npm run test:cov
+# 3) Run in dev (hot-reload)
+npm run start:dev
+# Swagger UI at http://localhost:3000/docs
 ```
+
+### Using Docker (dev)
+
+```bash
+docker compose up --build
+# app runs on 3000 (mapped by compose)
+```
+
+---
+
+## Testing (unit + E2E with real MySQL)
+
+* **Schema application**: the API uses the Prisma schema shipped by `shakadb`.
+
+* **Seed**: `scripts/seed-test-db.ts` inserts a minimal, consistent dataset (Pipeline spot + relations).
+
+* **E2E convenience**:
+
+  ```bash
+  # spin up a disposable local MySQL for E2E (port 3307)
+  npm run e2e:db:up
+  # seed test data into DATABASE_URL declared in .env.test*
+  npm run e2e:db:seed
+  # run E2E tests
+  npm run test:e2e
+  # tear down the container
+  npm run e2e:db:down
+  ```
+
+* **One-liners**
+
+  ```bash
+  npm test           # unit tests
+  npm run test:e2e   # end-to-end tests
+  npm run test:cov   # coverage
+  ```
+
+> CI mirrors the above: it boots a MySQL 8.4 service, applies `shakadb`’s schema via `prisma db push`, seeds, builds, lints, and runs both test suites.
+
+---
+
+## Configuration
+
+All envs are validated with **Zod** (`src/config/env.schema.ts`). Key variables:
+
+* `PORT` (default 3000)
+* `FRONT_API_BASE_URL` – comma-separated origins for CORS allowlist
+* `DATABASE_URL` – MySQL DSN (required; used by `shakadb`/Prisma)
+* `RATE_LIMIT_WINDOW_MS` / `RATE_LIMIT_MAX`
+* `RATE_LIMIT_STORE` = `memory` | `redis` (with `REDIS_URL` when `redis`)
+* `LOG_LEVEL` (e.g., `debug` in dev, `info` in prod)
+
+---
+
+## API surface (summary)
+
+* **`POST /surfspot`**
+  Validated body (`CreateSurfSpotDto`): destination, address, optional metadata (stateCountry, difficultyLevel \[1..5], `peakSeasonBegin/End` as ISO dates, `magicSeaweedLink`, `createdTime`, `geocodeRaw`). Returns a normalized DTO (dates ISO strings) with empty enrichment arrays on create.
+
+* **`GET /surfspot/all`**
+  Returns a list of `SurfSpotDto`, each enriched with `photoUrls`, `breakTypes`, `influencers`.
+
+* **`GET /surfspot/:id`**
+  Returns one `SurfSpotDto` or 404.
+
+* **`GET /healthz`**
+  `{ ok: true, ts: <ISO> }`
+
+All endpoints are documented and exampled in **Swagger** (`/docs`).
+
+---
+
+## Internals & structure
+
+* **Modules**: `AppModule`, `SurfSpotModule`, `PrismaModule`
+* **Service**: `SurfSpotService` maps raw Prisma results → `SurfSpotEntity` → `SurfSpotDto`, and bulk-enriches related data with efficient `findMany` joins
+* **Logging**: `nestjs-pino` with request ID generation, pretty logs in dev, redaction of secrets, 4xx/5xx log levels
+* **Security**: Helmet, strict CORS with allowlist, global ValidationPipe (`whitelist`, `forbidNonWhitelisted`, `transform`)
+* **DX**: TS strictness (`noImplicitAny`, `strictNullChecks`, etc.), path alias `shakaapi/*`, Prettier, ESLint flat config, commit hooks (format+lint, branch name rules)
+
+---
+
+## NPM scripts (highlights)
+
+* **Dev/Build**: `start`, `start:dev`, `build`
+* **Test**: `test`, `test:watch`, `test:e2e`, `test:cov`
+* **E2E DB helpers**: `e2e:db:up`, `e2e:db:seed`, `e2e:db:down`
+* **Quality**: `lint`, `format`
+* **Convenience**: `clean`, `commit` (commitizen)
+
+---
 
 ## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+* **Docker**: multi-stage build (`node:24-alpine`), production runner executes `node dist/src/main.js`
+* **CSP note**: CSP is disabled in dev for Swagger; in prod Helmet enables safe defaults (with exceptions so `/docs` continues to work)
+* **Rate limiting**: Defaults to memory; switch to Redis via `RATE_LIMIT_STORE=redis` and `REDIS_URL` in prod
+* **Reverse proxy**: App trusts proxy (for correct client IPs in rate-limit) — configure your ingress (NGINX/Traefik) accordingly
